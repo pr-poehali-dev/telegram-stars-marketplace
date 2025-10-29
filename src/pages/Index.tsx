@@ -7,9 +7,24 @@ import { Input } from '@/components/ui/input';
 import Icon from '@/components/ui/icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('home');
+  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [purchaseAmount, setPurchaseAmount] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
 
   const marketplaceItems = [
     {
@@ -52,6 +67,35 @@ const Index = () => {
     { id: 3, type: 'buy', amount: 2500, price: 242.00, status: 'completed', time: '1 час назад' },
     { id: 4, type: 'sell', amount: 750, price: 78.75, status: 'completed', time: '3 часа назад' }
   ];
+
+  const handleBuyClick = (item: any) => {
+    setSelectedItem(item);
+    setPurchaseAmount(item.amount.toString());
+    setPurchaseDialogOpen(true);
+  };
+
+  const handlePurchaseConfirm = async () => {
+    setIsProcessing(true);
+    
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    setPurchaseDialogOpen(false);
+    setIsProcessing(false);
+    setPurchaseAmount('');
+    
+    toast({
+      title: '✅ Покупка успешна!',
+      description: `Вы купили ${purchaseAmount} ⭐ за $${(parseFloat(purchaseAmount) * 0.10).toFixed(2)}. Уведомление отправлено в Telegram.`,
+      duration: 5000,
+    });
+  };
+
+  const calculateTotal = () => {
+    if (!purchaseAmount || !selectedItem) return '0.00';
+    const amount = parseFloat(purchaseAmount);
+    const pricePerStar = selectedItem.price / selectedItem.amount;
+    return (amount * pricePerStar).toFixed(2);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -233,7 +277,10 @@ const Index = () => {
                           <p className="text-2xl font-heading font-bold">${item.price}</p>
                         </div>
                       </div>
-                      <Button className="w-full bg-primary hover:bg-primary/90 group-hover:neon-glow">
+                      <Button 
+                        className="w-full bg-primary hover:bg-primary/90 group-hover:neon-glow"
+                        onClick={() => handleBuyClick(item)}
+                      >
                         <Icon name="ShoppingCart" size={18} className="mr-2" />
                         Купить сейчас
                       </Button>
@@ -412,6 +459,112 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={purchaseDialogOpen} onOpenChange={setPurchaseDialogOpen}>
+        <DialogContent className="glass-card sm:max-w-[500px] border-primary/30">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-heading gradient-text">
+              Подтверждение покупки
+            </DialogTitle>
+            <DialogDescription>
+              Купите Telegram Stars у проверенного продавца
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedItem && (
+            <div className="space-y-6 py-4">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/50">
+                <Avatar className="w-12 h-12 border-2 border-primary">
+                  <AvatarFallback className="bg-secondary text-white">
+                    {selectedItem.seller[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-heading font-semibold">{selectedItem.seller}</p>
+                  <div className="flex items-center gap-2">
+                    <Icon name="Star" size={14} className="text-yellow-500" />
+                    <span className="text-sm">{selectedItem.rating}</span>
+                    <span className="text-xs text-muted-foreground">• {selectedItem.trades} сделок</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="amount">Количество Stars</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  placeholder="Введите количество"
+                  value={purchaseAmount}
+                  onChange={(e) => setPurchaseAmount(e.target.value)}
+                  className="glass-card text-lg"
+                  max={selectedItem.amount}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Доступно: {selectedItem.amount.toLocaleString()} ⭐
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 border border-primary/30 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Цена за 1 ⭐</span>
+                  <span className="font-semibold">${(selectedItem.price / selectedItem.amount).toFixed(3)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Количество</span>
+                  <span className="font-semibold">{purchaseAmount || 0} ⭐</span>
+                </div>
+                <div className="h-px bg-border my-2"></div>
+                <div className="flex justify-between items-center">
+                  <span className="font-heading font-bold text-lg">Итого</span>
+                  <span className="font-heading font-bold text-2xl gradient-text">
+                    ${calculateTotal()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-primary/10 border border-primary/30">
+                <Icon name="Info" size={20} className="text-primary mt-0.5" />
+                <div className="text-sm space-y-1">
+                  <p className="font-semibold text-primary">Мгновенная доставка через Telegram Bot</p>
+                  <p className="text-muted-foreground">
+                    После оплаты Stars будут переведены на ваш аккаунт автоматически. 
+                    Вы получите push-уведомление о статусе транзакции.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setPurchaseDialogOpen(false)}
+              disabled={isProcessing}
+              className="border-2 border-muted"
+            >
+              Отменить
+            </Button>
+            <Button 
+              onClick={handlePurchaseConfirm}
+              disabled={!purchaseAmount || parseFloat(purchaseAmount) <= 0 || isProcessing}
+              className="bg-primary hover:bg-primary/90 neon-glow min-w-[140px]"
+            >
+              {isProcessing ? (
+                <>
+                  <Icon name="Loader2" size={18} className="mr-2 animate-spin" />
+                  Обработка...
+                </>
+              ) : (
+                <>
+                  <Icon name="Check" size={18} className="mr-2" />
+                  Купить
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

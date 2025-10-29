@@ -24,7 +24,18 @@ const Index = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [purchaseAmount, setPurchaseAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [username, setUsername] = useState('');
+  const [selectedStarAmount, setSelectedStarAmount] = useState<number | null>(null);
   const { toast } = useToast();
+
+  const starPackages = [
+    { amount: 100, price: 10, popular: false },
+    { amount: 500, price: 48, popular: false },
+    { amount: 1000, price: 95, popular: true },
+    { amount: 2500, price: 235, popular: false },
+    { amount: 5000, price: 465, popular: false },
+    { amount: 10000, price: 920, popular: false }
+  ];
 
   const marketplaceItems = [
     {
@@ -149,24 +160,104 @@ const Index = () => {
           <TabsContent value="home" className="space-y-8 animate-fade-in">
             <section className="relative overflow-hidden rounded-3xl glass-card p-12 border-2 border-primary/30">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-secondary/10 to-accent/10" />
-              <div className="relative z-10 max-w-3xl">
-                <Badge className="mb-4 bg-primary/20 text-primary border-primary/50">Платформа №1</Badge>
-                <h2 className="text-5xl font-heading font-bold mb-4 gradient-text">
-                  Торгуйте Telegram Stars безопасно
-                </h2>
-                <p className="text-xl text-muted-foreground mb-8">
-                  Децентрализованная платформа для покупки и продажи Telegram Stars с мгновенными транзакциями через Telegram Bot API
-                </p>
-                <div className="flex gap-4">
-                  <Button size="lg" className="bg-primary hover:bg-primary/90 neon-glow">
-                    <Icon name="Rocket" size={20} className="mr-2" />
-                    Начать торговлю
-                  </Button>
-                  <Button size="lg" variant="outline" className="border-2 border-primary/50 hover:bg-primary/10">
-                    <Icon name="PlayCircle" size={20} className="mr-2" />
-                    Как это работает
-                  </Button>
+              <div className="relative z-10">
+                <div className="text-center mb-10">
+                  <Badge className="mb-4 bg-primary/20 text-primary border-primary/50">Платформа №1</Badge>
+                  <h2 className="text-5xl font-heading font-bold mb-4 gradient-text">
+                    Купить Telegram Stars
+                  </h2>
+                  <p className="text-xl text-muted-foreground">
+                    Мгновенная доставка через Telegram Bot API
+                  </p>
                 </div>
+
+                <Card className="glass-card border-primary/30 max-w-2xl mx-auto">
+                  <CardContent className="p-8 space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="username-input" className="text-base">
+                        Ваш Telegram Username
+                      </Label>
+                      <div className="relative">
+                        <Icon name="AtSign" size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="username-input"
+                          placeholder="username"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          className="glass-card h-14 pl-12 text-lg"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-base">Выберите количество Stars</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {starPackages.map((pkg) => (
+                          <button
+                            key={pkg.amount}
+                            onClick={() => setSelectedStarAmount(pkg.amount)}
+                            className={`relative p-4 rounded-xl border-2 transition-all hover:scale-105 ${
+                              selectedStarAmount === pkg.amount
+                                ? 'border-primary bg-primary/20 neon-glow'
+                                : 'border-border/50 glass-card hover:border-primary/50'
+                            }`}
+                          >
+                            {pkg.popular && (
+                              <Badge className="absolute -top-2 -right-2 bg-accent text-white border-0">
+                                Популярно
+                              </Badge>
+                            )}
+                            <div className="text-center space-y-1">
+                              <p className="text-2xl font-heading font-bold gradient-text">
+                                {pkg.amount.toLocaleString()} ⭐
+                              </p>
+                              <p className="text-lg font-semibold">${pkg.price}</p>
+                              <p className="text-xs text-muted-foreground">
+                                ${(pkg.price / pkg.amount).toFixed(3)} за 1⭐
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {selectedStarAmount && username && (
+                      <div className="p-6 rounded-xl bg-gradient-to-br from-primary/20 via-secondary/20 to-accent/20 border border-primary/30 space-y-3 animate-fade-in">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Получатель</span>
+                          <span className="font-semibold">@{username}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Количество</span>
+                          <span className="font-semibold">{selectedStarAmount.toLocaleString()} ⭐</span>
+                        </div>
+                        <div className="h-px bg-border"></div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-heading font-bold text-lg">Итого</span>
+                          <span className="font-heading font-bold text-2xl gradient-text">
+                            ${starPackages.find(p => p.amount === selectedStarAmount)?.price}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <Button 
+                      size="lg" 
+                      className="w-full bg-primary hover:bg-primary/90 neon-glow h-14 text-lg"
+                      disabled={!username || !selectedStarAmount}
+                      onClick={() => {
+                        toast({
+                          title: '✅ Заказ оформлен!',
+                          description: `${selectedStarAmount} ⭐ будут отправлены на @${username}`,
+                          duration: 5000,
+                        });
+                      }}
+                    >
+                      <Icon name="Zap" size={20} className="mr-2" />
+                      Купить сейчас
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
             </section>
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,7 +26,30 @@ const Index = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [username, setUsername] = useState('');
   const [selectedStarAmount, setSelectedStarAmount] = useState<number | null>(null);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (activeTab === 'transactions') {
+      loadOrders();
+    }
+  }, [activeTab]);
+
+  const loadOrders = async () => {
+    setLoadingOrders(true);
+    try {
+      const response = await fetch('https://functions.poehali.dev/ba94cb6e-5fef-4a38-b8ca-1c01d6d72124');
+      const data = await response.json();
+      if (data.success) {
+        setOrders(data.orders);
+      }
+    } catch (error) {
+      console.error('Failed to load orders:', error);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
 
   const starPackages = [
     { amount: 100, price: 10, popular: false },
@@ -112,6 +135,7 @@ const Index = () => {
         });
         setUsername('');
         setSelectedStarAmount(null);
+        loadOrders();
       } else {
         toast({
           title: '❌ Ошибка',
@@ -487,45 +511,77 @@ const Index = () => {
           <TabsContent value="transactions" className="animate-fade-in">
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle className="font-heading">История транзакций</CardTitle>
-                <CardDescription>Все ваши покупки и продажи</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="font-heading">История заказов</CardTitle>
+                    <CardDescription>Все заказы Telegram Stars</CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={loadOrders}
+                    disabled={loadingOrders}
+                  >
+                    <Icon name={loadingOrders ? 'Loader2' : 'RefreshCw'} size={16} className={loadingOrders ? 'animate-spin' : ''} />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recentTransactions.map((tx) => (
-                    <div 
-                      key={tx.id}
-                      className="flex items-center justify-between p-4 rounded-xl glass-card hover:border-primary/50 transition-all"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                          tx.type === 'buy' ? 'bg-green-500/20' : 'bg-red-500/20'
-                        }`}>
-                          <Icon 
-                            name={tx.type === 'buy' ? 'ArrowDown' : 'ArrowUp'} 
-                            size={20}
-                            className={tx.type === 'buy' ? 'text-green-500' : 'text-red-500'}
-                          />
+                {loadingOrders ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Icon name="Loader2" size={32} className="animate-spin text-primary" />
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Icon name="Package" size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Пока нет заказов</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.map((order) => (
+                      <div 
+                        key={order.id}
+                        className="flex items-center justify-between p-4 rounded-xl glass-card hover:border-primary/50 transition-all"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary/20">
+                            <Icon name="Star" size={20} className="text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold">
+                              @{order.username} • {order.star_amount.toLocaleString()} ⭐
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(order.created_at).toLocaleString('ru-RU', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold">
-                            {tx.type === 'buy' ? 'Покупка' : 'Продажа'} {tx.amount} ⭐
-                          </p>
-                          <p className="text-sm text-muted-foreground">{tx.time}</p>
+                        <div className="text-right">
+                          <p className="font-heading font-bold">${order.price_usd.toFixed(2)}</p>
+                          <Badge 
+                            variant="secondary"
+                            className={
+                              order.status === 'sent' 
+                                ? 'bg-green-500/20 text-green-500 border-green-500/50' 
+                                : order.status === 'pending'
+                                ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50'
+                                : 'bg-muted/50'
+                            }
+                          >
+                            {order.status === 'sent' ? 'Отправлено' : 
+                             order.status === 'pending' ? 'Ожидание' : 
+                             order.status}
+                          </Badge>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-heading font-bold">${tx.price}</p>
-                        <Badge 
-                          variant={tx.status === 'completed' ? 'default' : 'secondary'}
-                          className={tx.status === 'completed' ? 'bg-green-500/20 text-green-500' : ''}
-                        >
-                          {tx.status === 'completed' ? 'Завершено' : 'В обработке'}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

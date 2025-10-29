@@ -1,0 +1,44 @@
+{
+  "tests": [
+    {
+      "name": "Test valid purchase request",
+      "method": "POST",
+      "body": {
+        "username": "testuser",
+        "star_amount": 1000
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "username": "testuser",
+        "star_amount": 1000
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test missing username",
+      "method": "POST",
+      "body": {
+        "star_amount": 500
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "Username is required"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test invalid star amount",
+      "method": "POST",
+      "body": {
+        "username": "testuser",
+        "star_amount": 0
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "Invalid star amount"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

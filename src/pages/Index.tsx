@@ -85,6 +85,53 @@ const Index = () => {
     setPurchaseDialogOpen(true);
   };
 
+  const handleQuickPurchase = async () => {
+    if (!username || !selectedStarAmount) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      const response = await fetch('https://functions.poehali.dev/e29fc9da-e34b-4d0a-926a-349428f82bb6', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: username,
+          star_amount: selectedStarAmount
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        toast({
+          title: '✅ Заказ успешно создан!',
+          description: `${selectedStarAmount.toLocaleString()} ⭐ будут отправлены на @${username}. Проверьте Telegram для подтверждения.`,
+          duration: 5000,
+        });
+        setUsername('');
+        setSelectedStarAmount(null);
+      } else {
+        toast({
+          title: '❌ Ошибка',
+          description: data.error || 'Не удалось создать заказ. Проверьте username.',
+          duration: 5000,
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      toast({
+        title: '❌ Ошибка сети',
+        description: 'Не удалось связаться с сервером. Попробуйте позже.',
+        duration: 5000,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handlePurchaseConfirm = async () => {
     setIsProcessing(true);
     
@@ -244,17 +291,20 @@ const Index = () => {
                     <Button 
                       size="lg" 
                       className="w-full bg-primary hover:bg-primary/90 neon-glow h-14 text-lg"
-                      disabled={!username || !selectedStarAmount}
-                      onClick={() => {
-                        toast({
-                          title: '✅ Заказ оформлен!',
-                          description: `${selectedStarAmount} ⭐ будут отправлены на @${username}`,
-                          duration: 5000,
-                        });
-                      }}
+                      disabled={!username || !selectedStarAmount || isProcessing}
+                      onClick={handleQuickPurchase}
                     >
-                      <Icon name="Zap" size={20} className="mr-2" />
-                      Купить сейчас
+                      {isProcessing ? (
+                        <>
+                          <Icon name="Loader2" size={20} className="mr-2 animate-spin" />
+                          Обработка...
+                        </>
+                      ) : (
+                        <>
+                          <Icon name="Zap" size={20} className="mr-2" />
+                          Купить сейчас
+                        </>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>
